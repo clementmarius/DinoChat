@@ -3,24 +3,34 @@ namespace App\Models;
 
 use App\Core\Database;
 use PDO;
+use PDOException;
+
 
 class User {
 
-    public function register($data) {
+    public function register($pseudo, $email, $password ) {
         $db = Database::getInstance();
+        var_dump($db);
 
         try {
-            $stmt = $db->prepare("INSERT INTO users (email, pseudo, password) VALUES (?, ?, ?)");
-            $stmt->execute([
-                $data['email'], 
-                $data['pseudo'], 
-                password_hash($data['password'], PASSWORD_BCRYPT)
-            ]);
-        } catch (\PDOException $e) {
-            if ($e->getCode() == 23000) {
-                throw new \Exception("Cette adresse email ou ce pseudo est déjà utilisé.");
-            }
-            throw new \Exception("Une erreur est survenue : " . $e->getMessage());
+            // Hash du mot de passe
+            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+            // Insertion dans la base de données
+            $stmt = $db->prepare("
+                INSERT INTO users ( email, pseudo, password)
+                VALUES (:email, :pseudo, :password)
+            ");
+
+            $stmt->bindParam(':pseudo', $pseudo, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+            $stmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+
+            $stmt->execute();
+            return true;
+        } catch (PDOException $e) {
+            error_log("Erreur SQL : " . $e->getMessage());
+            return "Erreur SQL : " . $e->getMessage(); // Retourner l'erreur pour débogage
         }
     }
 
